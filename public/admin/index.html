@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel NFC — Google Reviews</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #1a73e8; --primary-dark: #1557b0;
+      --success: #34a853; --danger: #ea4335; --warning: #fbbc05;
+      --dark: #202124; --gray: #5f6368; --light: #f8f9fa; --border: #dadce0;
+      --shadow: 0 1px 3px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
+    }
+    body { font-family: 'Segoe UI', Roboto, Arial, sans-serif; background: #f1f3f4; color: var(--dark); min-height: 100vh; }
+
+    /* ── LOGIN ── */
+    #login-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      padding: 20px;
+    }
+    .login-box {
+      background: #fff; border-radius: 20px; padding: 40px 32px;
+      width: 100%; max-width: 360px; box-shadow: 0 12px 40px rgba(0,0,0,.25); text-align: center;
+    }
+    .logo-big { font-size: 52px; margin-bottom: 8px; }
+    .login-box h1 { font-size: 20px; margin-bottom: 4px; }
+    .login-box p  { color: var(--gray); font-size: 13px; margin-bottom: 28px; }
+    .inp {
+      width: 100%; padding: 13px 16px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 15px; outline: none; transition: border-color .2s;
+      font-family: inherit; margin-bottom: 14px;
+    }
+    .inp:focus { border-color: var(--primary); }
+    .btn {
+      padding: 11px 20px; border: none; border-radius: 10px; font-size: 14px;
+      font-weight: 600; cursor: pointer; transition: all .18s;
+      display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:hover { background: #2d9248; }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .btn-danger:hover { background: #c62828; }
+    .btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+    .btn-outline:hover { background: #e8f0fe; }
+    .btn-gray { background: #f1f3f4; color: var(--dark); border: 1px solid var(--border); }
+    .btn-gray:hover { background: #e4e6e8; }
+    .btn-sm { padding: 7px 14px; font-size: 12px; border-radius: 8px; }
+    .btn-full { width: 100%; justify-content: center; }
+    .err { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 18px; }
+
+    /* ── APP ── */
+    #app { display: none; flex-direction: column; min-height: 100vh; }
+    header {
+      background: #fff; border-bottom: 1px solid var(--border);
+      padding: 0 20px; height: 58px; display: flex; align-items: center;
+      justify-content: space-between; position: sticky; top: 0; z-index: 50;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .h-left { display: flex; align-items: center; gap: 10px; }
+    .h-left .logo { font-size: 26px; }
+    .h-title { font-size: 16px; font-weight: 700; }
+    .h-badge { font-size: 11px; background: #e8f0fe; color: var(--primary); padding: 2px 8px; border-radius: 20px; display: none; }
+    @media (min-width: 480px) { .h-badge { display: inline-block; } }
+
+    /* ── NAV TABS (mobile) ── */
+    .tabs {
+      display: flex; background: #fff; border-bottom: 1px solid var(--border);
+      position: sticky; top: 58px; z-index: 40; overflow-x: auto;
+    }
+    .tab {
+      flex: 1; min-width: 80px; padding: 12px 8px; text-align: center;
+      font-size: 13px; font-weight: 600; color: var(--gray); cursor: pointer;
+      border-bottom: 3px solid transparent; transition: all .2s; white-space: nowrap;
+    }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+
+    /* ── CONTENT PANELS ── */
+    .panel { display: none; padding: 16px; max-width: 1000px; margin: 0 auto; width: 100%; }
+    .panel.active { display: block; }
+
+    /* ── STATS ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    @media (max-width: 500px) { .stats-grid { grid-template-columns: 1fr 1fr; } }
+    .stat-card {
+      background: #fff; border-radius: 14px; padding: 16px; box-shadow: var(--shadow);
+      display: flex; flex-direction: column; align-items: center; text-align: center;
+    }
+    .stat-icon { font-size: 28px; margin-bottom: 6px; }
+    .stat-num { font-size: 26px; font-weight: 700; color: var(--dark); }
+    .stat-lbl { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+    /* ── TOOLBAR ── */
+    .toolbar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+    .toolbar .search { flex: 1; min-width: 160px; }
+    .search-inp {
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px; outline: none; transition: border-color .2s;
+    }
+    .search-inp:focus { border-color: var(--primary); }
+    .toolbar-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ── CARD LIST (mobile) ── */
+    .card-list { display: flex; flex-direction: column; gap: 10px; }
+    .card-item {
+      background: #fff; border-radius: 14px; padding: 16px; box-shadow: var(--shadow);
+    }
+    .card-item-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+    .card-item-id { font-family: monospace; font-size: 13px; background: #f1f3f4; padding: 3px 8px; border-radius: 6px; font-weight: 700; }
+    .card-item-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .card-item-url { font-size: 12px; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .card-item-url a { color: inherit; text-decoration: none; }
+    .card-item-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 8px; flex-wrap: wrap; }
+    .card-item-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-ok    { background: #e6f4ea; color: var(--success); }
+    .badge-empty { background: #fce8e6; color: var(--danger); }
+    .badge-scans { background: #e8f0fe; color: var(--primary); }
+
+    /* ── TABLE (desktop only) ── */
+    .table-wrap { background: #fff; border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; display: none; }
+    @media (min-width: 768px) {
+      .table-wrap { display: block; }
+      .card-list { display: none; }
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--light); }
+    th { padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
+    td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #f1f3f4; vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafafa; }
+    .tbl-id { font-family: monospace; background: #f1f3f4; padding: 2px 7px; border-radius: 5px; font-size: 12px; }
+    .tbl-url { max-width: 200px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .tbl-url a { color: var(--primary); text-decoration: none; }
+    .tbl-actions { display: flex; gap: 5px; }
+
+    /* ── EMPTY ── */
+    .empty { text-align: center; padding: 50px 20px; color: var(--gray); }
+    .empty .icon { font-size: 48px; margin-bottom: 14px; }
+    .empty h3 { font-size: 17px; color: var(--dark); margin-bottom: 6px; }
+
+    /* ── MODALES ── */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: flex-end; justify-content: center; padding: 0; }
+    .overlay.open { display: flex; }
+    @media (min-width: 600px) { .overlay { align-items: center; padding: 20px; } }
+    .modal {
+      background: #fff; width: 100%; max-width: 500px; padding: 28px 24px;
+      border-radius: 20px 20px 0 0; max-height: 92vh; overflow-y: auto;
+      box-shadow: 0 -4px 30px rgba(0,0,0,.15);
+    }
+    @media (min-width: 600px) { .modal { border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.25); } }
+    .modal h3 { font-size: 17px; margin-bottom: 18px; }
+    .fg { margin-bottom: 14px; }
+    .fg label { display: block; font-size: 12px; font-weight: 700; color: var(--gray); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+    .fg input, .fg textarea {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px; outline: none; font-family: inherit; transition: border-color .2s;
+    }
+    .fg input:focus, .fg textarea:focus { border-color: var(--primary); }
+    .fg textarea { resize: vertical; min-height: 70px; }
+    .fg .hint { font-size: 11px; color: var(--gray); margin-top: 4px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+    @media (max-width: 400px) { .modal-actions { flex-direction: column-reverse; } .modal-actions .btn { width: 100%; justify-content: center; } }
+
+    /* ── QR PANEL ── */
+    .qr-center { text-align: center; }
+    .qr-center img { border-radius: 10px; border: 1px solid var(--border); max-width: 240px; width: 100%; }
+    .qr-url-box { font-family: monospace; font-size: 11px; color: var(--gray); background: var(--light); padding: 8px 12px; border-radius: 8px; margin: 12px 0; word-break: break-all; }
+
+    /* ── IMPRIMIR QRs ── */
+    .print-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .print-card {
+      background: #fff; border-radius: 12px; padding: 12px; box-shadow: var(--shadow);
+      text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .print-card img { width: 120px; height: 120px; border-radius: 6px; }
+    .print-card .pc-id { font-family: monospace; font-size: 12px; font-weight: 700; background: #f1f3f4; padding: 2px 8px; border-radius: 5px; }
+    .print-card .pc-biz { font-size: 11px; color: var(--gray); }
+    .print-card input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+    .print-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+    .print-controls label { font-size: 13px; font-weight: 600; color: var(--gray); }
+    .print-controls input[type=text] {
+      flex: 1; min-width: 180px; padding: 9px 13px;
+      border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; outline: none;
+    }
+    .print-controls input:focus { border-color: var(--primary); }
+    .select-bar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .select-bar span { font-size: 13px; color: var(--gray); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #333; color: #fff; padding: 11px 22px; border-radius: 30px;
+      font-size: 13px; display: none; z-index: 200; white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(0,0,0,.3);
+    }
+
+    /* ── LOADING ── */
+    .loading { display: flex; justify-content: center; align-items: center; padding: 40px; }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── PRINT styles ── */
+    @media print {
+      body { background: white; }
+      header, .tabs, .toolbar, .select-bar, .print-controls, #toast { display: none !important; }
+      .panel { display: block !important; padding: 0; }
+      .print-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+      .print-card { box-shadow: none; border: 1px solid #ddd; page-break-inside: avoid; }
+      .print-card input[type=checkbox] { display: none; }
+      .btn { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo-big">📶</div>
+    <h1>NFC Google Reviews</h1>
+    <p>Panel de Administración</p>
+    <input class="inp" type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password"/>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Ingresar</button>
+    <div class="err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ══ APP ════════════════════════════════════════════════════ -->
+<div id="app">
+  <header>
+    <div class="h-left">
+      <span class="logo">📶</span>
+      <span class="h-title">NFC Reviews</span>
+      <span class="h-badge">Panel Admin</span>
+    </div>
+    <button class="btn btn-gray btn-sm" onclick="doLogout()">Salir</button>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs">
+    <div class="tab active" onclick="showTab('tarjetas')"><span class="tab-icon">🃏</span>Tarjetas</div>
+    <div class="tab" onclick="showTab('imprimir')"><span class="tab-icon">🖨️</span>Imprimir QR</div>
+    <div class="tab" onclick="showTab('ayuda')"><span class="tab-icon">❓</span>Ayuda</div>
+  </nav>
+
+  <!-- ── PANEL: Tarjetas ── -->
+  <div class="panel active" id="panel-tarjetas">
+    <!-- Stats -->
+    <div class="stats-grid" style="margin-top:16px">
+      <div class="stat-card"><div class="stat-icon">🃏</div><div class="stat-num" id="s-total">0</div><div class="stat-lbl">Tarjetas</div></div>
+      <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-num" id="s-conf">0</div><div class="stat-lbl">Con local</div></div>
+      <div class="stat-card"><div class="stat-icon">👆</div><div class="stat-num" id="s-scans">0</div><div class="stat-lbl">Escaneos</div></div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search"><input class="search-inp" type="text" id="search" placeholder="🔍  Buscar ID o local..." oninput="renderAll()"/></div>
+      <div class="toolbar-btns">
+        <button class="btn btn-gray btn-sm" onclick="openBatch()">+ Lote</button>
+        <button class="btn btn-primary btn-sm" onclick="openAdd()">+ Nueva</button>
+      </div>
+    </div>
+
+    <!-- Mobile cards -->
+    <div class="card-list" id="card-list"></div>
+
+    <!-- Desktop table -->
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>ID</th><th>Local</th><th>URL Google</th>
+          <th>Estado</th><th>Escaneos</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+      <div class="empty" id="tbl-empty" style="display:none">
+        <div class="icon">📭</div>
+        <h3>No hay tarjetas</h3>
+        <p>Crea una tarjeta o un lote para comenzar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: Imprimir QR ── -->
+  <div class="panel" id="panel-imprimir">
+    <div style="margin-top:16px">
+      <h3 style="margin-bottom:12px;font-size:16px">Hoja de impresión de QR</h3>
+      <div class="print-controls">
+        <label>URL de tu servidor:</label>
+        <input type="text" id="print-host" placeholder="https://tuapp.vercel.app"/>
+        <button class="btn btn-primary btn-sm" onclick="loadPrintQRs()">Generar QRs</button>
+      </div>
+      <div class="select-bar">
+        <button class="btn btn-gray btn-sm" onclick="selectAllQRs(true)">Seleccionar todos</button>
+        <button class="btn btn-gray btn-sm" onclick="selectAllQRs(false)">Deseleccionar</button>
+        <span id="sel-count">0 seleccionados</span>
+        <button class="btn btn-success btn-sm" onclick="window.print()" style="margin-left:auto">🖨️ Imprimir</button>
+      </div>
+      <div class="print-grid" id="print-grid">
+        <div class="empty" style="grid-column:1/-1">
+          <div class="icon">🖨️</div>
+          <h3>Haz clic en "Generar QRs"</h3>
+          <p>Pon la URL de Vercel y genera todos los QR para imprimir.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: Ayuda ── -->
+  <div class="panel" id="panel-ayuda">
+    <div style="margin-top:16px;max-width:600px">
+      <div style="background:#fff;border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <h3 style="margin-bottom:20px">Como usar el sistema</h3>
+
+        <div style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="font-size:28px;min-width:36px">1️⃣</div>
+            <div>
+              <strong>Crea un lote de tarjetas</strong>
+              <p style="font-size:13px;color:var(--gray);margin-top:4px">
+                Ve a "Tarjetas" → "+ Lote". Pon un prefijo (ej: TAR) y la cantidad.
+                Se crearán TAR001, TAR002, etc. listas para asignar.
+              </p>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="font-size:28px;min-width:36px">2️⃣</div>
+            <div>
+              <strong>Imprime los QR en hoja</strong>
+              <p style="font-size:13px;color:var(--gray);margin-top:4px">
+                Ve a "Imprimir QR", pon la URL de Vercel, genera y selecciona los que quieres imprimir.
+                Todos los QR del mismo lote son iguales al escaneo pero distintos por ID.
+              </p>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="font-size:28px;min-width:36px">3️⃣</div>
+            <div>
+              <strong>Pega el QR en la tarjeta NFC</strong>
+              <p style="font-size:13px;color:var(--gray);margin-top:4px">
+                Recorta el QR y pégalo en la tarjeta PVC NFC. El número de ID debe quedar visible.
+              </p>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="font-size:28px;min-width:36px">4️⃣</div>
+            <div>
+              <strong>Cuando un local te compra</strong>
+              <p style="font-size:13px;color:var(--gray);margin-top:4px">
+                Abre el panel, edita esa tarjeta, pon el nombre del negocio y pega el enlace de Google Reviews.
+                ¡Listo! El QR ya redirige al local correcto.
+              </p>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="font-size:28px;min-width:36px">5️⃣</div>
+            <div>
+              <strong>Como obtener el enlace de Google Reviews</strong>
+              <p style="font-size:13px;color:var(--gray);margin-top:4px">
+                Busca el negocio en Google Maps → haz clic en "Escribir una reseña" → copia la URL del navegador.
+                También puedes usar: <code style="background:#f1f3f4;padding:2px 6px;border-radius:4px">g.page/r/...</code>
+              </p>
+            </div>
+          </div>
+          <div style="display:flex;gap:14px;align-items:flex-start">
+            <div style="font-size:28px;min-width:36px">📱</div>
+            <div>
+              <strong>Celulares sin NFC</strong>
+              <p style="font-size:13px;color:var(--gray);margin-top:4px">
+                Escanean el código QR con la cámara y van directo a Google Reviews. Sin apps extra.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Agregar / Editar ════════════════════════════════ -->
+<div class="overlay" id="m-card">
+  <div class="modal">
+    <h3 id="m-card-title">Nueva Tarjeta</h3>
+    <div class="fg">
+      <label>ID de la tarjeta *</label>
+      <input type="text" id="f-id" placeholder="Ej: TAR001"/>
+      <div class="hint">Solo letras, números, guiones. Aparece en la URL del QR.</div>
+    </div>
+    <div class="fg">
+      <label>Nombre del local</label>
+      <input type="text" id="f-biz" placeholder="Ej: Café Central Tarija"/>
+    </div>
+    <div class="fg">
+      <label>URL de Google Reviews</label>
+      <input type="url" id="f-url" placeholder="https://g.page/r/..."/>
+      <div class="hint">Pega el enlace directo de reseñas de Google Maps.</div>
+    </div>
+    <div class="fg">
+      <label>Notas internas</label>
+      <textarea id="f-notes" placeholder="Fecha de venta, teléfono del cliente..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeM('m-card')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCard()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: QR ══════════════════════════════════════════════ -->
+<div class="overlay" id="m-qr">
+  <div class="modal" style="max-width:380px">
+    <h3>QR — <span id="qr-id"></span></h3>
+    <div class="fg">
+      <label>URL de tu servidor (Vercel)</label>
+      <input type="text" id="qr-host" placeholder="https://tuapp.vercel.app" oninput="refreshQR()"/>
+      <div class="hint">Cuando estés en producción pon tu URL de Vercel.</div>
+    </div>
+    <div class="qr-center">
+      <img id="qr-img" src="" alt="QR" width="220" height="220"/>
+      <div class="qr-url-box" id="qr-url"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeM('m-qr')">Cerrar</button>
+      <button class="btn btn-success" onclick="downloadQR()">⬇ Descargar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Lote ════════════════════════════════════════════ -->
+<div class="overlay" id="m-batch">
+  <div class="modal">
+    <h3>Crear Lote de Tarjetas</h3>
+    <p style="font-size:13px;color:var(--gray);margin-bottom:18px">
+      Crea múltiples tarjetas numeradas automáticamente.
+    </p>
+    <div class="fg">
+      <label>Prefijo</label>
+      <input type="text" id="b-prefix" value="TAR" oninput="prevBatch()"/>
+      <div class="hint">Letras antes del número. Ej: TAR, NFC, REV</div>
+    </div>
+    <div class="fg">
+      <label>Número inicial</label>
+      <input type="number" id="b-start" value="1" min="1" oninput="prevBatch()"/>
+    </div>
+    <div class="fg">
+      <label>Cantidad</label>
+      <input type="number" id="b-count" value="20" min="1" max="500" oninput="prevBatch()"/>
+    </div>
+    <div class="fg">
+      <label>Notas (opcional)</label>
+      <input type="text" id="b-notes" placeholder="Lote octubre 2024"/>
+    </div>
+    <div style="background:#f1f3f4;padding:10px 14px;border-radius:10px;font-family:monospace;font-size:12px;color:var(--gray)" id="b-preview">
+      TAR001, TAR002, ... TAR020
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeM('m-batch')">Cancelar</button>
+      <button class="btn btn-primary" onclick="createBatch()">Crear Lote</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Eliminar ════════════════════════════════════════ -->
+<div class="overlay" id="m-delete">
+  <div class="modal" style="max-width:380px">
+    <h3>Eliminar tarjeta</h3>
+    <p style="margin:12px 0 24px;color:var(--gray)">
+      Se eliminará <strong id="del-id"></strong> y su historial. Esta acción no se puede deshacer.
+    </p>
+    <div class="modal-actions">
+      <button class="btn btn-gray" onclick="closeM('m-delete')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmDel()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Estado ─────────────────────────────────────────────────────
+let cards   = [];
+let editId  = null;
+let delId   = null;
+let qrId    = null;
+
+// ── Utils ──────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2800);
+}
+function openM(id)  { $(id).classList.add('open'); }
+function closeM(id) { $(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+
+// ── Tabs ───────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['tarjetas','imprimir','ayuda'][i] === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  $(`panel-${name}`).classList.add('active');
+}
+
+// ── Auth ────────────────────────────────────────────────────────
+async function doLogin() {
+  $('login-err').textContent = '';
+  const pass = $('login-pass').value;
+  try {
+    const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password:pass}) });
+    const d = await r.json();
+    if (d.success) { $('login-screen').style.display='none'; $('app').style.display='flex'; loadCards(); }
+    else $('login-err').textContent = d.error || 'Contraseña incorrecta';
+  } catch { $('login-err').textContent = 'Error de conexión'; }
+}
+async function doLogout() { await fetch('/api/logout',{method:'POST'}); location.reload(); }
+$('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+window.addEventListener('load', async () => {
+  const d = await (await fetch('/api/me')).json();
+  if (d.loggedIn) { $('login-screen').style.display='none'; $('app').style.display='flex'; loadCards(); }
+  // Poner host actual en los campos de URL
+  const h = location.origin;
+  $('qr-host').value = h;
+  $('print-host').value = h;
+});
+
+// ── Cargar tarjetas ─────────────────────────────────────────────
+async function loadCards() {
+  cards = await (await fetch('/api/cards')).json();
+  updateStats(); renderAll();
+}
+function updateStats() {
+  $('s-total').textContent  = cards.length;
+  $('s-conf').textContent   = cards.filter(c => c.google_url).length;
+  $('s-scans').textContent  = cards.reduce((s,c) => s + Number(c.total_scans||0), 0);
+}
+
+// ── Render ──────────────────────────────────────────────────────
+function renderAll() {
+  const q = $('search').value.toLowerCase();
+  const f = cards.filter(c => c.id.toLowerCase().includes(q) || (c.business_name||'').toLowerCase().includes(q));
+  renderCards(f); renderTable(f);
+}
+
+function renderCards(list) {
+  if (!list.length) {
+    $('card-list').innerHTML = '<div class="empty"><div class="icon">📭</div><h3>Sin tarjetas</h3><p>Crea una nueva o un lote.</p></div>';
+    return;
+  }
+  $('card-list').innerHTML = list.map(c => `
+    <div class="card-item">
+      <div class="card-item-top">
+        <div>
+          <div class="card-item-id">${c.id}</div>
+          <div class="card-item-name" style="margin-top:6px">${c.business_name || '<em style="color:#999;font-weight:400">Sin local asignado</em>'}</div>
+          ${c.google_url ? `<div class="card-item-url"><a href="${c.google_url}" target="_blank">${c.google_url.substring(0,45)}...</a></div>` : ''}
+        </div>
+        <span class="badge ${c.google_url ? 'badge-ok':'badge-empty'}">${c.google_url ? 'OK':'Sin URL'}</span>
+      </div>
+      <div class="card-item-footer">
+        <span class="badge badge-scans">${c.total_scans||0} escaneos</span>
+        <div class="card-item-actions">
+          <button class="btn btn-gray btn-sm" onclick="showQR('${c.id}')">QR</button>
+          <button class="btn btn-primary btn-sm" onclick="openEdit('${c.id}')">Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="openDel('${c.id}')">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function renderTable(list) {
+  $('tbl-empty').style.display = list.length ? 'none' : 'block';
+  $('tbl-body').innerHTML = list.map(c => `
+    <tr>
+      <td><span class="tbl-id">${c.id}</span></td>
+      <td>${c.business_name || '<em style="color:#999">—</em>'}</td>
+      <td class="tbl-url">${c.google_url ? `<a href="${c.google_url}" target="_blank">${c.google_url.replace('https://','').substring(0,30)}...</a>` : '—'}</td>
+      <td><span class="badge ${c.google_url?'badge-ok':'badge-empty'}">${c.google_url?'OK':'Sin URL'}</span></td>
+      <td><span class="badge badge-scans">${c.total_scans||0}</span></td>
+      <td class="tbl-actions">
+        <button class="btn btn-gray btn-sm" onclick="showQR('${c.id}')">QR</button>
+        <button class="btn btn-primary btn-sm" onclick="openEdit('${c.id}')">Editar</button>
+        <button class="btn btn-danger btn-sm" onclick="openDel('${c.id}')">✕</button>
+      </td>
+    </tr>`).join('');
+}
+
+// ── Agregar / Editar ────────────────────────────────────────────
+function openAdd() {
+  editId = null;
+  $('m-card-title').textContent = 'Nueva Tarjeta';
+  ['f-id','f-biz','f-url','f-notes'].forEach(id => $(id).value = '');
+  $('f-id').disabled = false;
+  openM('m-card'); setTimeout(() => $('f-id').focus(), 150);
+}
+function openEdit(id) {
+  const c = cards.find(x => x.id === id); if (!c) return;
+  editId = id;
+  $('m-card-title').textContent = 'Editar — ' + id;
+  $('f-id').value = id; $('f-id').disabled = true;
+  $('f-biz').value = c.business_name || '';
+  $('f-url').value = c.google_url || '';
+  $('f-notes').value = c.notes || '';
+  openM('m-card'); setTimeout(() => $('f-biz').focus(), 150);
+}
+async function saveCard() {
+  const id  = $('f-id').value.trim();
+  const biz = $('f-biz').value.trim();
+  const url = $('f-url').value.trim();
+  const nts = $('f-notes').value.trim();
+  if (!editId && !id) { alert('El ID es obligatorio'); return; }
+  const r = editId
+    ? await fetch(`/api/cards/${editId}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_name:biz,google_url:url,notes:nts})})
+    : await fetch('/api/cards',            {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,business_name:biz,google_url:url,notes:nts})});
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  closeM('m-card');
+  toast(editId ? 'Tarjeta actualizada' : 'Tarjeta creada');
+  loadCards();
+}
+
+// ── Eliminar ────────────────────────────────────────────────────
+function openDel(id) { delId = id; $('del-id').textContent = id; openM('m-delete'); }
+async function confirmDel() {
+  await fetch(`/api/cards/${delId}`, {method:'DELETE'});
+  closeM('m-delete'); toast('Tarjeta eliminada'); loadCards();
+}
+
+// ── QR Individual ───────────────────────────────────────────────
+function showQR(id) {
+  qrId = id; $('qr-id').textContent = id;
+  openM('m-qr'); refreshQR();
+}
+async function refreshQR() {
+  if (!qrId) return;
+  const host = $('qr-host').value.trim().replace(/\/$/,'');
+  const d = await (await fetch(`/api/cards/${qrId}/qr?host=${encodeURIComponent(host)}`)).json();
+  $('qr-img').src = d.qr; $('qr-url').textContent = d.url;
+}
+function downloadQR() {
+  const host = $('qr-host').value.trim().replace(/\/$/,'');
+  const a = document.createElement('a');
+  a.href = `/api/cards/${qrId}/qr.png?host=${encodeURIComponent(host)}`;
+  a.download = `qr-${qrId}.png`; a.click();
+}
+
+// ── Lote ────────────────────────────────────────────────────────
+function openBatch() { prevBatch(); openM('m-batch'); }
+function prevBatch() {
+  const p = $('b-prefix').value || 'TAR';
+  const s = parseInt($('b-start').value) || 1;
+  const n = Math.min(parseInt($('b-count').value) || 10, 500);
+  const pad = String(s+n-1).length;
+  const ids = [];
+  for (let i=s; i<s+Math.min(n,4); i++) ids.push(`${p}${String(i).padStart(pad,'0')}`);
+  if (n>4) ids.push(`...${p}${String(s+n-1).padStart(pad,'0')}`);
+  $('b-preview').textContent = ids.join(', ');
+}
+async function createBatch() {
+  const r = await fetch('/api/cards/batch', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({prefix:$('b-prefix').value||'TAR', start:$('b-start').value||1, count:$('b-count').value||10, notes:$('b-notes').value})
+  });
+  const d = await r.json();
+  closeM('m-batch'); toast(`${d.count} tarjetas creadas`); loadCards();
+}
+
+// ── Imprimir QRs ────────────────────────────────────────────────
+async function loadPrintQRs() {
+  const host = $('print-host').value.trim().replace(/\/$/,'');
+  if (!cards.length) { toast('No hay tarjetas. Crea un lote primero.'); return; }
+  $('print-grid').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  try {
+    const resp = await fetch('/api/qr/bulk', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ids: cards.map(c=>c.id), host })
+    });
+    const data = await resp.json();
+    $('print-grid').innerHTML = data.map(item => {
+      const card = cards.find(c => c.id === item.id);
+      return `<div class="print-card">
+        <input type="checkbox" checked onchange="updateSelCount()"/>
+        <img src="${item.qr}" alt="${item.id}"/>
+        <div class="pc-id">${item.id}</div>
+        <div class="pc-biz">${card?.business_name || 'Sin asignar'}</div>
+      </div>`;
+    }).join('');
+    updateSelCount();
+  } catch(e) { $('print-grid').innerHTML = '<p style="color:red;padding:20px">Error generando QRs. Verifica la URL.</p>'; }
+}
+function selectAllQRs(state) {
+  document.querySelectorAll('#print-grid input[type=checkbox]').forEach(c => c.checked = state);
+  updateSelCount();
+}
+function updateSelCount() {
+  const n = document.querySelectorAll('#print-grid input[type=checkbox]:checked').length;
+  $('sel-count').textContent = `${n} seleccionados`;
+}
+</script>
+</body>
+</html>
