@@ -8,7 +8,7 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "@libsql/client": "^0.6.2",
+    "@libsql/client": "^0.18.0",
     "bcryptjs": "^2.4.3",
     "cookie-session": "^2.1.1",
     "docx": "^9.8.1",
