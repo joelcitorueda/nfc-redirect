@@ -33,8 +33,11 @@ function parseCookies(req) {
 
 function requireAuth(req, res, next) {
   try {
+    // Acepta token desde cookie O desde header Authorization: Bearer <token>
     const cookies = parseCookies(req);
-    const token   = cookies[COOKIE_NAME];
+    const fromCookie = cookies[COOKIE_NAME];
+    const fromHeader = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    const token = fromCookie || fromHeader;
     if (!token) return res.status(401).json({ error: 'No autorizado' });
     jwt.verify(token, JWT_SECRET);
     next();
@@ -82,10 +85,11 @@ app.post('/api/login', (req, res) => {
   const { password } = req.body;
   if (password === ADMIN_PASS) {
     const token = jwt.sign({ admin: true }, JWT_SECRET, { expiresIn: '8h' });
+    // Guardar en cookie Y devolver en body (para que el frontend lo guarde en localStorage)
     res.setHeader('Set-Cookie',
       `${COOKIE_NAME}=${token}; HttpOnly; Path=/; SameSite=Lax; Max-Age=${8*3600}`
     );
-    res.json({ success: true });
+    res.json({ success: true, token });
   } else {
     res.status(401).json({ error: 'Contraseña incorrecta' });
   }
@@ -98,8 +102,10 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/me', (req, res) => {
   try {
-    const cookies = parseCookies(req);
-    const token = cookies[COOKIE_NAME];
+    const cookies   = parseCookies(req);
+    const fromCookie = cookies[COOKIE_NAME];
+    const fromHeader = (req.headers['authorization'] || '').replace('Bearer ', '').trim();
+    const token = fromCookie || fromHeader;
     if (!token) return res.json({ loggedIn: false });
     jwt.verify(token, JWT_SECRET);
     res.json({ loggedIn: true });

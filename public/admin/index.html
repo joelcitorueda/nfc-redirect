@@ -505,24 +505,58 @@ function showTab(name) {
   $(`panel-${name}`).classList.add('active');
 }
 
-// ── Auth ────────────────────────────────────────────────────────
+// ── Auth con localStorage (funciona en Vercel serverless) ───────
+function getToken() { return localStorage.getItem('nfc_token') || ''; }
+function authHeaders() {
+  const t = getToken();
+  return { 'Content-Type': 'application/json', ...(t ? { 'Authorization': `Bearer ${t}` } : {}) };
+}
+
+async function apiFetch(url, opts = {}) {
+  return fetch(url, { ...opts, headers: { ...authHeaders(), ...(opts.headers || {}) } });
+}
+
 async function doLogin() {
   $('login-err').textContent = '';
   const pass = $('login-pass').value;
   try {
-    const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password:pass}) });
+    const r = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pass })
+    });
     const d = await r.json();
-    if (d.success) { $('login-screen').style.display='none'; $('app').style.display='flex'; loadCards(); }
-    else $('login-err').textContent = d.error || 'Contraseña incorrecta';
+    if (d.success && d.token) {
+      localStorage.setItem('nfc_token', d.token);
+      $('login-screen').style.display = 'none';
+      $('app').style.display = 'flex';
+      loadCards();
+    } else {
+      $('login-err').textContent = d.error || 'Contraseña incorrecta';
+    }
   } catch { $('login-err').textContent = 'Error de conexión'; }
 }
-async function doLogout() { await fetch('/api/logout',{method:'POST'}); location.reload(); }
+
+async function doLogout() {
+  localStorage.removeItem('nfc_token');
+  location.reload();
+}
 $('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 
 window.addEventListener('load', async () => {
-  const d = await (await fetch('/api/me')).json();
-  if (d.loggedIn) { $('login-screen').style.display='none'; $('app').style.display='flex'; loadCards(); }
-  // Poner host actual en los campos de URL
+  const token = getToken();
+  if (token) {
+    // Verificar que el token sigue siendo válido
+    const r = await apiFetch('/api/me');
+    const d = await r.json();
+    if (d.loggedIn) {
+      $('login-screen').style.display = 'none';
+      $('app').style.display = 'flex';
+      loadCards();
+    } else {
+      localStorage.removeItem('nfc_token');
+    }
+  }
   const h = location.origin;
   $('qr-host').value = h;
   $('print-host').value = h;
@@ -530,7 +564,9 @@ window.addEventListener('load', async () => {
 
 // ── Cargar tarjetas ─────────────────────────────────────────────
 async function loadCards() {
-  cards = await (await fetch('/api/cards')).json();
+  const r = await apiFetch('/api/cards');
+  cards = await r.json();
+  if (!Array.isArray(cards)) { cards = []; }
   updateStats(); renderAll();
 }
 function updateStats() {
@@ -614,8 +650,8 @@ async function saveCard() {
   const nts = $('f-notes').value.trim();
   if (!editId && !id) { alert('El ID es obligatorio'); return; }
   const r = editId
-    ? await fetch(`/api/cards/${editId}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({business_name:biz,google_url:url,notes:nts})})
-    : await fetch('/api/cards',            {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,business_name:biz,google_url:url,notes:nts})});
+    ? await apiFetch(`/api/cards/${editId}`, {method:'PUT', body:JSON.stringify({business_name:biz,google_url:url,notes:nts})})
+    : await apiFetch('/api/cards',            {method:'POST',body:JSON.stringify({id,business_name:biz,google_url:url,notes:nts})});
   const d = await r.json();
   if (d.error) { alert(d.error); return; }
   closeM('m-card');
@@ -626,7 +662,7 @@ async function saveCard() {
 // ── Eliminar ────────────────────────────────────────────────────
 function openDel(id) { delId = id; $('del-id').textContent = id; openM('m-delete'); }
 async function confirmDel() {
-  await fetch(`/api/cards/${delId}`, {method:'DELETE'});
+  await apiFetch(`/api/cards/${delId}`, {method:'DELETE'});
   closeM('m-delete'); toast('Tarjeta eliminada'); loadCards();
 }
 
@@ -638,13 +674,15 @@ function showQR(id) {
 async function refreshQR() {
   if (!qrId) return;
   const host = $('qr-host').value.trim().replace(/\/$/,'');
-  const d = await (await fetch(`/api/cards/${qrId}/qr?host=${encodeURIComponent(host)}`)).json();
+  const r = await apiFetch(`/api/cards/${qrId}/qr?host=${encodeURIComponent(host)}`);
+  const d = await r.json();
   $('qr-img').src = d.qr; $('qr-url').textContent = d.url;
 }
 function downloadQR() {
   const host = $('qr-host').value.trim().replace(/\/$/,'');
+  const token = getToken();
   const a = document.createElement('a');
-  a.href = `/api/cards/${qrId}/qr.png?host=${encodeURIComponent(host)}`;
+  a.href = `/api/cards/${qrId}/qr.png?host=${encodeURIComponent(host)}&token=${encodeURIComponent(token)}`;
   a.download = `qr-${qrId}.png`; a.click();
 }
 
@@ -661,12 +699,24 @@ function prevBatch() {
   $('b-preview').textContent = ids.join(', ');
 }
 async function createBatch() {
-  const r = await fetch('/api/cards/batch', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({prefix:$('b-prefix').value||'TAR', start:$('b-start').value||1, count:$('b-count').value||10, notes:$('b-notes').value})
-  });
-  const d = await r.json();
-  closeM('m-batch'); toast(`${d.count} tarjetas creadas`); loadCards();
+  try {
+    const r = await apiFetch('/api/cards/batch', {
+      method:'POST',
+      body: JSON.stringify({
+        prefix: $('b-prefix').value || 'TAR',
+        start:  parseInt($('b-start').value) || 1,
+        count:  parseInt($('b-count').value) || 10,
+        notes:  $('b-notes').value
+      })
+    });
+    const d = await r.json();
+    closeM('m-batch');
+    if (d.error) { toast('Error: ' + d.error); return; }
+    toast(`${d.count} tarjetas creadas`);
+    loadCards();
+  } catch(e) {
+    toast('Error de conexion: ' + e.message);
+  }
 }
 
 // ── Imprimir QRs ────────────────────────────────────────────────
@@ -675,11 +725,12 @@ async function loadPrintQRs() {
   if (!cards.length) { toast('No hay tarjetas. Crea un lote primero.'); return; }
   $('print-grid').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
-    const resp = await fetch('/api/qr/bulk', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+    const resp = await apiFetch('/api/qr/bulk', {
+      method:'POST',
       body: JSON.stringify({ ids: cards.map(c=>c.id), host })
     });
     const data = await resp.json();
+    if (!Array.isArray(data)) { $('print-grid').innerHTML = '<p style="color:red;padding:20px">Error: ' + (data.error||'Respuesta inesperada') + '</p>'; return; }
     $('print-grid').innerHTML = data.map(item => {
       const card = cards.find(c => c.id === item.id);
       return `<div class="print-card">
@@ -690,7 +741,7 @@ async function loadPrintQRs() {
       </div>`;
     }).join('');
     updateSelCount();
-  } catch(e) { $('print-grid').innerHTML = '<p style="color:red;padding:20px">Error generando QRs. Verifica la URL.</p>'; }
+  } catch(e) { $('print-grid').innerHTML = '<p style="color:red;padding:20px">Error: ' + e.message + '</p>'; }
 }
 function selectAllQRs(state) {
   document.querySelectorAll('#print-grid input[type=checkbox]').forEach(c => c.checked = state);
@@ -700,6 +751,7 @@ function updateSelCount() {
   const n = document.querySelectorAll('#print-grid input[type=checkbox]:checked').length;
   $('sel-count').textContent = `${n} seleccionados`;
 }
+
 </script>
 </body>
 </html>
