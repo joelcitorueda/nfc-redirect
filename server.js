@@ -200,6 +200,99 @@ app.get('/api/cards/:id/stats', requireAuth, async (req, res) => {
   res.json(await db.getStats(req.params.id));
 });
 
+// ── Generar Word con QRs 4×4cm ────────────────────────────────
+app.post('/api/qr/word', requireAuth, async (req, res) => {
+  try {
+    const { ids, host } = req.body;
+    const base = (host || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    const { Document, Packer, Paragraph, ImageRun, Table, TableRow, TableCell,
+            WidthType, AlignmentType, BorderStyle, TextRun } = require('docx');
+
+    // Generar QRs como buffer PNG
+    const items = [];
+    for (const id of ids) {
+      const url = `${base}/r/${id}`;
+      const buf = await QRCode.toBuffer(url, { width: 600, margin: 1, type: 'png' });
+      items.push({ id, buf });
+    }
+
+    // 4cm × 4cm en EMU (914400 EMU = 1 pulgada = 2.54cm → 1cm = 360000 EMU)
+    const SIZE_EMU = Math.round(4 * 360000); // 1440000 EMU = 4cm
+
+    const COLS = 4; // 4 QRs por fila
+    const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    const cellBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+    const tableRows = [];
+    for (let i = 0; i < items.length; i += COLS) {
+      const group = items.slice(i, i + COLS);
+      const cells = group.map(({ id, buf }) =>
+        new TableCell({
+          children: [
+            new Paragraph({
+              children: [new ImageRun({ data: buf, transformation: { width: SIZE_EMU / 9144, height: SIZE_EMU / 9144 }, type: 'png' })],
+              alignment: AlignmentType.CENTER,
+            }),
+            new Paragraph({
+              children: [new TextRun({ text: id, bold: true, size: 18, font: 'Courier New' })],
+              alignment: AlignmentType.CENTER,
+            }),
+          ],
+          margins: { top: 200, bottom: 200, left: 200, right: 200 },
+          borders: {
+            top:    { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+            bottom: { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+            left:   { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+            right:  { style: BorderStyle.DASHED, size: 4, color: 'CCCCCC' },
+          },
+          width: { size: Math.floor(100 / COLS), type: WidthType.PERCENTAGE },
+        })
+      );
+      // Rellenar si fila incompleta
+      while (cells.length < COLS) {
+        cells.push(new TableCell({
+          children: [new Paragraph({ children: [] })],
+          borders: cellBorders,
+          width: { size: Math.floor(100 / COLS), type: WidthType.PERCENTAGE },
+        }));
+      }
+      tableRows.push(new TableRow({ children: cells }));
+    }
+
+    const doc = new Document({
+      sections: [{
+        properties: {
+          page: {
+            size: { width: 12240, height: 15840 }, // A4 portrait en twips
+            margin: { top: 720, bottom: 720, left: 720, right: 720 },
+          }
+        },
+        children: [
+          new Paragraph({
+            children: [new TextRun({ text: 'QR Tarjetas NFC — Elian', bold: true, size: 28 })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Total: ${items.length} tarjetas | Tamaño QR: 4×4cm | Imprimir al 100%`, size: 18, color: '666666', italics: true })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 300 },
+          }),
+          new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } }),
+        ],
+      }],
+    });
+
+    const buffer = await Packer.toBuffer(doc);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="QR_Elian_${items.length}tarjetas.docx"`);
+    res.send(buffer);
+  } catch (e) {
+    console.error('Error generando Word:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Panel ─────────────────────────────────────────────────────
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin', 'index.html'));

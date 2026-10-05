@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel NFC — Google Reviews</title>
+  <title>Elian — Sistema de Reseñas Google</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -24,7 +24,7 @@
       background: #fff; border-radius: 20px; padding: 40px 32px;
       width: 100%; max-width: 360px; box-shadow: 0 12px 40px rgba(0,0,0,.25); text-align: center;
     }
-    .logo-big { font-size: 52px; margin-bottom: 8px; }
+    .logo-big { display: flex; justify-content: center; margin-bottom: 12px; color: var(--primary); }
     .login-box h1 { font-size: 20px; margin-bottom: 4px; }
     .login-box p  { color: var(--gray); font-size: 13px; margin-bottom: 28px; }
     .inp {
@@ -61,7 +61,7 @@
       box-shadow: 0 1px 4px rgba(0,0,0,.08);
     }
     .h-left { display: flex; align-items: center; gap: 10px; }
-    .h-left .logo { font-size: 26px; }
+    .h-left .logo { display: flex; align-items: center; color: var(--primary); }
     .h-title { font-size: 16px; font-weight: 700; }
     .h-badge { font-size: 11px; background: #e8f0fe; color: var(--primary); padding: 2px 8px; border-radius: 20px; display: none; }
     @media (min-width: 480px) { .h-badge { display: inline-block; } }
@@ -77,7 +77,11 @@
       border-bottom: 3px solid transparent; transition: all .2s; white-space: nowrap;
     }
     .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .tab-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+    .tab-icon {
+      display: flex; justify-content: center; align-items: center;
+      width: 20px; height: 20px; margin: 0 auto 2px;
+    }
+    .tab-icon svg { width: 20px; height: 20px; }
 
     /* ── CONTENT PANELS ── */
     .panel { display: none; padding: 16px; max-width: 1000px; margin: 0 auto; width: 100%; }
@@ -188,7 +192,7 @@
       border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; outline: none;
     }
     .print-controls input:focus { border-color: var(--primary); }
-    .select-bar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    .select-bar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; }
     .select-bar span { font-size: 13px; color: var(--gray); }
 
     /* ── TOAST ── */
@@ -221,9 +225,17 @@
 <!-- ══ LOGIN ══════════════════════════════════════════════════ -->
 <div id="login-screen">
   <div class="login-box">
-    <div class="logo-big">📶</div>
-    <h1>NFC Google Reviews</h1>
-    <p>Panel de Administración</p>
+    <div class="logo-big">
+      <!-- NFC card icon -->
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+        <line x1="1" y1="10" x2="23" y2="10"/>
+        <path d="M9 15 Q10.5 13.5 12 15 Q13.5 16.5 15 15" stroke-width="1.5"/>
+        <path d="M7 15 Q10 11.5 12 13 Q14 14.5 17 15" stroke-width="1" opacity="0.6"/>
+      </svg>
+    </div>
+    <h1>Elian</h1>
+    <p>Sistema de Reseñas Google</p>
     <input class="inp" type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password"/>
     <button class="btn btn-primary btn-full" onclick="doLogin()">Ingresar</button>
     <div class="err" id="login-err"></div>
@@ -234,18 +246,61 @@
 <div id="app">
   <header>
     <div class="h-left">
-      <span class="logo">📶</span>
-      <span class="h-title">NFC Reviews</span>
+      <span class="logo">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+          <line x1="1" y1="10" x2="23" y2="10"/>
+          <path d="M9 15 Q10.5 13.5 12 15 Q13.5 16.5 15 15" stroke-width="1.5"/>
+        </svg>
+      </span>
+      <span class="h-title">Elian</span>
       <span class="h-badge">Panel Admin</span>
     </div>
-    <button class="btn btn-gray btn-sm" onclick="doLogout()">Salir</button>
+    <button class="btn btn-gray btn-sm" onclick="doLogout()">
+      <!-- exit icon -->
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Salir
+    </button>
   </header>
 
   <!-- Tabs -->
   <nav class="tabs">
-    <div class="tab active" onclick="showTab('tarjetas')"><span class="tab-icon">🃏</span>Tarjetas</div>
-    <div class="tab" onclick="showTab('imprimir')"><span class="tab-icon">🖨️</span>Imprimir QR</div>
-    <div class="tab" onclick="showTab('ayuda')"><span class="tab-icon">❓</span>Ayuda</div>
+    <div class="tab active" onclick="showTab('tarjetas')">
+      <span class="tab-icon">
+        <!-- credit card icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2"/>
+          <line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+      </span>
+      Tarjetas
+    </div>
+    <div class="tab" onclick="showTab('imprimir')">
+      <span class="tab-icon">
+        <!-- printer icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+      </span>
+      Imprimir QR
+    </div>
+    <div class="tab" onclick="showTab('ayuda')">
+      <span class="tab-icon">
+        <!-- question mark circle icon -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </span>
+      Ayuda
+    </div>
   </nav>
 
   <!-- ── PANEL: Tarjetas ── -->
@@ -261,8 +316,21 @@
     <div class="toolbar">
       <div class="search"><input class="search-inp" type="text" id="search" placeholder="🔍  Buscar ID o local..." oninput="renderAll()"/></div>
       <div class="toolbar-btns">
-        <button class="btn btn-gray btn-sm" onclick="openBatch()">+ Lote</button>
-        <button class="btn btn-primary btn-sm" onclick="openAdd()">+ Nueva</button>
+        <button class="btn btn-gray btn-sm" onclick="openBatch()">
+          <!-- grid/stack icon -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+          </svg>
+          + Lote
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="openAdd()">
+          <!-- plus icon -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          + Nueva
+        </button>
       </div>
     </div>
 
@@ -299,7 +367,25 @@
         <button class="btn btn-gray btn-sm" onclick="selectAllQRs(true)">Seleccionar todos</button>
         <button class="btn btn-gray btn-sm" onclick="selectAllQRs(false)">Deseleccionar</button>
         <span id="sel-count">0 seleccionados</span>
-        <button class="btn btn-success btn-sm" onclick="window.print()" style="margin-left:auto">🖨️ Imprimir</button>
+        <button class="btn btn-success btn-sm" onclick="window.print()" style="margin-left:auto">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+            <rect x="6" y="14" width="12" height="8"/>
+          </svg>
+          Imprimir
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="downloadWordQR()">
+          <!-- document/word icon -->
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          Descargar Word (.docx)
+        </button>
       </div>
       <div class="print-grid" id="print-grid">
         <div class="empty" style="grid-column:1/-1">
@@ -567,6 +653,7 @@ async function loadCards() {
   const r = await apiFetch('/api/cards');
   cards = await r.json();
   if (!Array.isArray(cards)) { cards = []; }
+  cards.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' }));
   updateStats(); renderAll();
 }
 function updateStats() {
@@ -750,6 +837,47 @@ function selectAllQRs(state) {
 function updateSelCount() {
   const n = document.querySelectorAll('#print-grid input[type=checkbox]:checked').length;
   $('sel-count').textContent = `${n} seleccionados`;
+}
+
+// ── Descargar Word con QRs ──────────────────────────────────────
+async function downloadWordQR() {
+  const host = $('print-host').value.trim().replace(/\/$/,'');
+  const checkboxes = document.querySelectorAll('#print-grid input[type=checkbox]:checked');
+  if (!checkboxes.length) { toast('Selecciona al menos un QR'); return; }
+
+  // Obtener los IDs de los print-cards que tienen el checkbox marcado
+  const ids = [];
+  checkboxes.forEach(cb => {
+    const card = cb.closest('.print-card');
+    if (card) {
+      const idEl = card.querySelector('.pc-id');
+      if (idEl) ids.push(idEl.textContent.trim());
+    }
+  });
+
+  if (!ids.length) { toast('No se pudieron obtener los IDs seleccionados'); return; }
+
+  toast('Generando Word...');
+  try {
+    const resp = await apiFetch('/api/qr/word', {
+      method: 'POST',
+      body: JSON.stringify({ ids, host })
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      toast('Error: ' + (err.error || resp.statusText));
+      return;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'qr-elian.docx';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch(e) {
+    toast('Error al descargar Word: ' + e.message);
+  }
 }
 
 </script>
